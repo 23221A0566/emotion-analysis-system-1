@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import torch
 import pandas as pd
@@ -8,13 +9,21 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 # Load Tokenizer and Model
 # ==========================
 
-tokenizer = AutoTokenizer.from_pretrained(
-    "distilbert-base-uncased"
-)
+@st.cache_resource
+def load_model():
 
-model = AutoModelForSequenceClassification.from_pretrained(
-    "."
-)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "saleem1319/emotion-detection-system"
+    )
+
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "saleem1319/emotion-detection-system"
+    )
+
+    return tokenizer, model
+
+
+tokenizer, model = load_model()
 
 # ==========================
 # Emotion Labels
@@ -54,7 +63,7 @@ st.sidebar.write("""
 
 **Framework:** Hugging Face Transformers
 
-**Developer:** k saleem
+**Developer:** K Saleem
 """)
 
 # ==========================
@@ -91,15 +100,9 @@ text = st.text_area(
 if st.button("🔍 Analyze Emotion"):
 
     if text.strip() == "":
-        st.warning(
-            "Please enter some text."
-        )
+        st.warning("Please enter some text.")
 
     else:
-
-        # ==========================
-        # Tokenization
-        # ==========================
 
         inputs = tokenizer(
             text,
@@ -108,21 +111,12 @@ if st.button("🔍 Analyze Emotion"):
             padding=True
         )
 
-        # ==========================
-        # Prediction
-        # ==========================
+        with torch.no_grad():
+            outputs = model(**inputs)
 
-        outputs = model(**inputs)
+        probs = torch.sigmoid(outputs.logits)[0]
 
-        probs = torch.sigmoid(
-            outputs.logits
-        )[0]
-
-        scores = probs.detach().numpy()
-
-        # ==========================
-        # DataFrame
-        # ==========================
+        scores = probs.cpu().numpy()
 
         results = pd.DataFrame({
             "Emotion": emotion_cols,
@@ -134,10 +128,6 @@ if st.button("🔍 Analyze Emotion"):
             ascending=False
         )
 
-        # ==========================
-        # Main Emotion
-        # ==========================
-
         top_emotion = results.iloc[0]["Emotion"]
         top_score = results.iloc[0]["Score"] * 100
 
@@ -145,43 +135,23 @@ if st.button("🔍 Analyze Emotion"):
             f"🎯 Predicted Emotion: {top_emotion.upper()} ({top_score:.2f}%)"
         )
 
-        # ==========================
-        # Top 5 Emotions
-        # ==========================
-
         st.subheader("🏆 Top 5 Emotions")
 
         for _, row in results.head(5).iterrows():
 
             st.write(
-                f"✅ {row['Emotion']} : {row['Score']*100:.2f}%"
+                f"✅ {row['Emotion']} : {row['Score'] * 100:.2f}%"
             )
 
-        # ==========================
-        # Bar Chart
-        # ==========================
+        st.subheader("📊 Emotion Confidence Scores")
 
-        st.subheader(
-            "📊 Emotion Confidence Scores"
-        )
-
-        chart_df = results.set_index(
-            "Emotion"
-        )
+        chart_df = results.set_index("Emotion")
 
         st.bar_chart(chart_df)
 
-        # ==========================
-        # Pie Chart
-        # ==========================
+        st.subheader("🥧 Emotion Distribution")
 
-        st.subheader(
-            "🥧 Emotion Distribution"
-        )
-
-        fig, ax = plt.subplots(
-            figsize=(8, 8)
-        )
+        fig, ax = plt.subplots(figsize=(8, 8))
 
         ax.pie(
             results.head(10)["Score"],
@@ -191,25 +161,13 @@ if st.button("🔍 Analyze Emotion"):
 
         st.pyplot(fig)
 
-        # ==========================
-        # Save History
-        # ==========================
-
         st.session_state.history.append({
             "Text": text[:50],
             "Emotion": top_emotion,
-            "Confidence": round(
-                top_score, 2
-            )
+            "Confidence": round(top_score, 2)
         })
 
-        # ==========================
-        # History Table
-        # ==========================
-
-        st.subheader(
-            "🕒 Analysis History"
-        )
+        st.subheader("🕒 Analysis History")
 
         history_df = pd.DataFrame(
             st.session_state.history
@@ -220,13 +178,7 @@ if st.button("🔍 Analyze Emotion"):
             use_container_width=True
         )
 
-        # ==========================
-        # Full Results Table
-        # ==========================
-
-        st.subheader(
-            "📋 All Emotion Scores"
-        )
+        st.subheader("📋 All Emotion Scores")
 
         results["Score"] = (
             results["Score"] * 100
@@ -237,13 +189,7 @@ if st.button("🔍 Analyze Emotion"):
             use_container_width=True
         )
 
-        # ==========================
-        # Download CSV
-        # ==========================
-
-        csv = results.to_csv(
-            index=False
-        )
+        csv = results.to_csv(index=False)
 
         st.download_button(
             label="📥 Download Report",
@@ -252,13 +198,7 @@ if st.button("🔍 Analyze Emotion"):
             mime="text/csv"
         )
 
-        # ==========================
-        # Statistics
-        # ==========================
-
-        st.subheader(
-            "📈 Statistics"
-        )
+        st.subheader("📈 Statistics")
 
         col1, col2 = st.columns(2)
 
@@ -273,3 +213,4 @@ if st.button("🔍 Analyze Emotion"):
                 "Confidence",
                 f"{top_score:.2f}%"
             )
+```
