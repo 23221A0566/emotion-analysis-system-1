@@ -1,10 +1,9 @@
+```txt
 streamlit
 torch
 transformers
 pandas
 matplotlib
-<<<<<<< HEAD
 safetensors
-=======
-safetensors
->>>>>>> 40e8b5ec4d9bd87eb2795aa3173023a56a3d6b82
+sentencepiece
+```
